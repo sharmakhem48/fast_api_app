@@ -2,11 +2,11 @@ from fastapi import FastAPI, Depends, HTTPException, Request,Response
 from .database import engine,SessionLocal, Base
 from sqlalchemy.orm import Session
 from . import models
-from .models import Addresses
+from .models import Address
 from .schemas import Address
 from fastapi.middleware.cors import CORSMiddleware
 
-
+models.Base.metadata.create_all(bind=engine) # Create tables
 app = FastAPI()
 
 origins = [
@@ -21,7 +21,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-models.Base.metadata.create_all(bind=engine) # Create tables
 
 def get_db():
     try:
@@ -33,12 +32,12 @@ def get_db():
 
 @app.get('/get_address/{address_id}')
 def getaddress(address_id: int, db: Session = Depends(get_db)):
-    return db.query(models.Addresses).filter(models.Addresses.id == address_id).first()
+    return db.query(models.Address).filter(models.Address.id == address_id).first()
 
 
 @app.post('/add_address')
 async def insert_into_db(address: Address, db: Session = Depends(get_db)):
-    address_model = models.Addresses()
+    address_model = models.Address()
     address_model.street = address.street
     address_model.city = address.city
     address_model.state = address.state
