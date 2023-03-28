@@ -3,7 +3,7 @@ from .database import engine,SessionLocal, Base
 from sqlalchemy.orm import Session
 from . import models
 from .models import Address
-from .schemas import Address as schema_address
+from .schemas import Address, AddressUpdate
 from fastapi.middleware.cors import CORSMiddleware
 
 models.Base.metadata.create_all(bind=engine) # Create tables
@@ -39,7 +39,7 @@ def get_address(address_id: int, response: Response, db: Session = Depends(get_d
 
 
 @app.post('/add_address',  status_code=status.HTTP_201_CREATED)
-async def create_address(address: schema_address, response: Response, db: Session = Depends(get_db)):
+async def create_address(address: Address, response: Response, db: Session = Depends(get_db)):
     try:
         address_model = models.Address()
         address_model.street = address.street
@@ -59,27 +59,27 @@ async def create_address(address: schema_address, response: Response, db: Sessio
 
 
 @app.delete('/delete_address/{address_id}', status_code=status.HTTP_204_NO_CONTENT)
-def delete_address(address_id: int, response: Response, db: Session = Depends(get_db)):
-    try:
-        db.query(models.Address).filter(models.Address.id==address_id).delete(synchronize_session=False)
-        db.commit()
-        return {'Message':'Delete successfully'}
-    
-    except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        return {'Message':f"Delete operation failed : {e}"}
-    
+def delete_address(address_id: int, 
+                   response: Response, db: Session = Depends(get_db)):
+    data = db.query(models.Address).filter(models.Address.id==address_id)
+    if not data.first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Address_id - {address_id} not found" )
+    data.delete(synchronize_session=False)
+    db.commit()
+    return {'Message':'Address_id - {address_id} deleted successfully'}
 
-@app.put('/update_address/{address_id}', status_code=status.HTTP_206_PARTIAL_CONTENT)
-def update_address(address_id: int, request: schema_address, response: Response, db: Session = Depends(get_db)):
-    try:
-        db.query(models.Address).filter(models.Address.id==address_id).update(request)
-        db.commit()
-        return {'Message':f"Record updated for address_id : {address_id}"}
+    
+@app.patch('/update_address/{address_id}', status_code=status.HTTP_206_PARTIAL_CONTENT)
+def update_address(address_id: int, request: AddressUpdate 
+                   , response: Response, db: Session = Depends(get_db)):
 
-    except Exception as e:
-        response.status_code = status.HTTP_304_NOT_MODIFIED
-        return {'Message':f"Not able to update : {e}"}
+    data = db.query(models.Address).filter(models.Address.id==address_id)
+    if not data.first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Address_id {address_id} not found" )
+    request_dict = request.dict(exclude_unset=True)
+    data.update(request_dict)
+    db.commit()
+    return {'Message':f"Record updated for address_id : {address_id}"}
 
         
 
