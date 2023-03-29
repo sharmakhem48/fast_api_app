@@ -66,7 +66,7 @@ def delete_address(address_id: int,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Address_id - {address_id} not found" )
     data.delete(synchronize_session=False)
     db.commit()
-    return {'Message':'Address_id - {address_id} deleted successfully'}
+    return {'Message':f"Address_id - {address_id} deleted successfully"}
 
     
 @app.patch('/update_address/{address_id}', status_code=status.HTTP_206_PARTIAL_CONTENT)
