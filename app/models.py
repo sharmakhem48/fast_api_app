@@ -1,5 +1,6 @@
 
-from sqlalchemy import Column, Integer, String,Float
+from sqlalchemy import Column, Integer, String,Float, REAL
+
 from .database import Base
 
 class Address(Base):
@@ -11,8 +12,8 @@ class Address(Base):
     state = Column(String)
     country = Column(String)
     zip = Column(String)
-    latitude = Column(Float)
-    longitude = Column(Float)
+    latitude = Column(REAL)
+    longitude = Column(REAL)
 
 
 

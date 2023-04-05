@@ -1,17 +1,23 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, status
-from .database import engine,SessionLocal, Base
+from .database import engine,SessionLocal, engine
 from sqlalchemy.orm import Session
 from . import models
 from .models import Address
 from .schemas import Address, AddressUpdate
 from fastapi.middleware.cors import CORSMiddleware
+import pandas as pd
+from .backend import closest_places_ids
+import sqlite3
+import logging
 
 models.Base.metadata.create_all(bind=engine) # Create tables
 app = FastAPI()
 
 origins = [
-    "http://127.0.0.1",
-    "http://127.0.0.1:8082",
+    "http://localhost",
+    "http://localhost:8000",
+    "http://localhost:8002",
+    "http://localhost:3000",
 ]
 
 app.add_middleware(
@@ -30,12 +36,28 @@ def get_db():
         db.close()
 
 
-@app.get('/get_address/{address_id}', status_code=status.HTTP_200_OK)
-def get_address(address_id: int, response: Response, db: Session = Depends(get_db)):
-    data = db.query(models.Address).filter(models.Address.id == address_id).first()
-    if not data:
-        response.status_code = status.HTTP_404_NOT_FOUND
-    return data
+@app.get('/get_address/{latitude}/{longitude}', status_code=status.HTTP_200_OK)
+async def get_address(latitude: str, longitude: str, response: Response, db: Session = Depends(get_db)):
+    conn = sqlite3.connect("fast_api_app.db")
+    cursor = conn.cursor()
+    sql= f'''SELECT * FROM addresses WHERE latitude BETWEEN cast({latitude} as float) AND cast({latitude} as float)+1 AND longitude BETWEEN cast({longitude} as float) AND cast({longitude} as float)+1
+            '''
+    print(sql)
+    try:
+        cursor.execute(sql)
+        data = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        data = [dict(zip(columns, row)) for row in data]
+        import pdb;pdb.set_trace()
+        data = pd.DataFrame(data)
+        address_id = closest_places_ids(data, latitude, longitude)
+        data = data.loc[data['id'].isin(address_id)]
+        if data.empty:
+            response.status_code = status.HTTP_404_NOT_FOUND
+    finally:
+        cursor.close()
+        conn.close()
+    return data.to_dict()
 
 
 @app.post('/add_address',  status_code=status.HTTP_201_CREATED)
