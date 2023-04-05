@@ -48,7 +48,6 @@ async def get_address(latitude: str, longitude: str, response: Response, db: Ses
         data = cursor.fetchall()
         columns = [column[0] for column in cursor.description]
         data = [dict(zip(columns, row)) for row in data]
-        import pdb;pdb.set_trace()
         data = pd.DataFrame(data)
         address_id = closest_places_ids(data, latitude, longitude)
         data = data.loc[data['id'].isin(address_id)]
